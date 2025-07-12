@@ -40,6 +40,16 @@ async function run() {
       }
     });
 
+    app.get("/admission", async (req, res) => {
+      try {
+        const admissions = await admissionCollection.find().toArray(); 
+        res.status(200).json(admissions);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server Error" });
+      }
+    });
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
