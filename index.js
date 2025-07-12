@@ -21,6 +21,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   const admissionCollection = client.db("admission").collection("campuses");
+  const reviewCollection = client.db("admission").collection("reviews");
   try {
     app.post("/admission", async (req, res) => {
       try {
@@ -39,14 +40,101 @@ async function run() {
         });
       }
     });
-
-    app.get("/admission", async (req, res) => {
+    app.post("/reviews", async (req, res) => {
       try {
-        const admissions = await admissionCollection.find().toArray(); 
-        res.status(200).json(admissions);
+        const reviewData = req.body;
+        const result = await reviewCollection.insertOne(reviewData);
+        res.status(201).send({
+          success: true,
+          message: "Review submitted successfully",
+          data: result,
+        });
       } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server Error" });
+        console.error("Error saving review:", error);
+        res.status(500).send({
+          success: false,
+          message: "Internal server error",
+        });
+      }
+    });
+    app.get("/reviews", async (req, res) => {
+      try {
+        const result = await reviewCollection.find().toArray();
+        res.status(201).send({
+          success: true,
+          message: "Review submitted successfully",
+          data: result,
+        });
+      } catch (error) {
+        console.error("Error saving review:", error);
+        res.status(500).send({
+          success: false,
+          message: "Internal server error",
+        });
+      }
+    });
+
+    app.get("/admission/:email", async (req, res) => {
+      try {
+        const email = req.params.email;
+
+        if (!email) {
+          return res.status(400).json({ message: "Email is required" });
+        }
+
+        const admission = await admissionCollection.findOne({ email });
+
+        if (!admission) {
+          return res
+            .status(404)
+            .json({ message: "No admission found with this email" });
+        }
+
+        res.status(200).json({ success: true, data: admission });
+      } catch (error) {
+        console.error("Error fetching admission by email:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+      }
+    });
+
+    app.put("/profile/:email", async (req, res) => {
+      try {
+        const email = req.params.email;
+        const profileData = req.body;
+
+        if (!email) {
+          return res.status(400).json({
+            success: false,
+            message: "Email parameter is required to update profile",
+          });
+        }
+
+        const filter = { email: email };
+
+        const updateDoc = {
+          $set: {
+            CandidateName: profileData.CandidateName,
+            email: profileData.email,
+            selectedCollege: profileData.selectedCollege,
+            address: profileData.address,
+          },
+        };
+
+        const result = await admissionCollection.updateOne(filter, updateDoc, {
+          upsert: true,
+        });
+
+        res.status(200).json({
+          success: true,
+          message: "Profile updated successfully",
+          data: result,
+        });
+      } catch (error) {
+        console.error("Profile update error:", error);
+        res.status(500).json({
+          success: false,
+          message: "Internal server error",
+        });
       }
     });
 
